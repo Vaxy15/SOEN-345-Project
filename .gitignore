@@ -68,8 +68,7 @@ node_modules/
 # dataconnect generated files
 .dataconnect
 
-# frontend build output
-frontend/dist
-# local secrets
-frontend/.env
 backend/serviceAccountKey.json
+backend/target
+frontend/dist
+frontend/.env
