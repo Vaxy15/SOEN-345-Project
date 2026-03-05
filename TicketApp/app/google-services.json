@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "1042150127641",
+    "project_id": "soen-345-project-f4b6f",
+    "storage_bucket": "soen-345-project-f4b6f.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1042150127641:android:b386626d101a2642a5d288",
+        "android_client_info": {
+          "package_name": "com.soen345.ticketapp"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCtdWPSRGvcEA4K76ijqGH9uTQtIBX-36Q"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
