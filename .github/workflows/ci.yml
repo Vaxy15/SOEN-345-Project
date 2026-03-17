@@ -21,6 +21,10 @@ jobs:
       - name: Gradle cache
         uses: gradle/actions/setup-gradle@v3
 
+      - name: Make gradlew executable
+        working-directory: TicketApp
+        run: chmod +x gradlew
+
       - name: Build (Debug) + Unit Tests
         working-directory: TicketApp
         run: ./gradlew --no-daemon clean testDebugUnitTest assembleDebug
