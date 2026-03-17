@@ -16,7 +16,26 @@
         android:theme="@style/Theme.TicketApp"
         tools:targetApi="31">
 
-        <!-- Launcher -->
+        <activity
+            android:name=".ui.AdminMenuActivity"
+            android:exported="false" />
+
+        <activity
+            android:name=".ui.EventListActivity"
+            android:exported="false" />
+
+        <activity
+            android:name=".ui.EditEventActivity"
+            android:exported="false" />
+
+        <activity
+            android:name=".ui.AddEventActivity"
+            android:exported="false" />
+
+        <activity
+            android:name=".ui.EventDetailsActivity"
+            android:exported="false" />
+
         <activity
             android:name=".ui.LoginActivity"
             android:exported="true">
@@ -25,17 +44,6 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-
-        <activity
-            android:name=".ui.EventListActivity"
-            android:exported="false" />
-
-        <activity
-            android:name=".ui.EventDetailsActivity"
-            android:exported="false" />
-
-        <!-- If you still have MainActivity, keep it NON-launcher or delete it -->
-        <!-- <activity android:name=".MainActivity" android:exported="false" /> -->
 
     </application>
 

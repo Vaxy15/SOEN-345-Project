@@ -35,6 +35,7 @@ dependencies {
     implementation("com.google.firebase:firebase-firestore")
     implementation(libs.appcompat)
     implementation(libs.activity)
+    implementation(libs.constraintlayout)
 
 
     // Unit tests (JUnit 5)
