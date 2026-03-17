@@ -1,3 +1,14 @@
 <resources>
     <string name="app_name">Ticket App</string>
+    <string name="add_event_title">Add Event</string>
+    <string name="edit_event_title">Edit Event</string>
+    <string name="event_name_hint">Event Name</string>
+    <string name="event_date_hint">Event Date</string>
+    <string name="event_location_hint">Location</string>
+    <string name="event_description_hint">Description</string>
+    <string name="save_event_button">Save Event</string>
+    <string name="update_event_button">Update Event</string>
+    <string name="edit_event_button">Edit Event</string>
+    <string name="cancel_event_button">Cancel Event</string>
+    <string name="available_seats_hint">Available Seats</string>
 </resources>

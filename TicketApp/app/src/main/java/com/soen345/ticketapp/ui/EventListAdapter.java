@@ -30,7 +30,11 @@ public class EventListAdapter extends RecyclerView.Adapter<EventListAdapter.VH> 
     @NonNull
     @Override
     public VH onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
-        RowEventBinding b = RowEventBinding.inflate(LayoutInflater.from(parent.getContext()), parent, false);
+        RowEventBinding b = RowEventBinding.inflate(
+                LayoutInflater.from(parent.getContext()),
+                parent,
+                false
+        );
         return new VH(b);
     }
 
@@ -38,10 +42,16 @@ public class EventListAdapter extends RecyclerView.Adapter<EventListAdapter.VH> 
     public void onBindViewHolder(@NonNull VH holder, int position) {
         Event e = items.get(position);
 
-        holder.binding.tvTitle.setText(e.getTitle());
-        holder.binding.tvLocation.setText(e.getLocation());
-        holder.binding.tvTime.setText(DateFormat.getDateTimeInstance().format(new Date(e.getDateTimeMillis())));
+        holder.binding.tvTitle.setText(e.getTitle() != null ? e.getTitle() : "Untitled event");
+        holder.binding.tvLocation.setText("Location: " + (e.getLocation() != null ? e.getLocation() : "Not specified"));
         holder.binding.tvSeats.setText("Seats: " + e.getAvailableSeats());
+
+        if (e.getEventDateTime() != null) {
+            Date eventDate = e.getEventDateTime().toDate();
+            holder.binding.tvTime.setText("Date: " + DateFormat.getDateTimeInstance().format(eventDate));
+        } else {
+            holder.binding.tvTime.setText("Date: No date");
+        }
 
         holder.binding.getRoot().setOnClickListener(v -> onClick.onClick(e));
     }
@@ -53,6 +63,7 @@ public class EventListAdapter extends RecyclerView.Adapter<EventListAdapter.VH> 
 
     static class VH extends RecyclerView.ViewHolder {
         final RowEventBinding binding;
+
         VH(RowEventBinding binding) {
             super(binding.getRoot());
             this.binding = binding;
