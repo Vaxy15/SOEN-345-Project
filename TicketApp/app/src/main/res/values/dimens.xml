@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <dimen name="padding_screen">20dp</dimen>
+    <dimen name="padding_card">20dp</dimen>
+    <dimen name="card_corner">16dp</dimen>
+    <dimen name="card_corner_sm">12dp</dimen>
+    <dimen name="card_elevation">3dp</dimen>
+    <dimen name="list_item_gap">10dp</dimen>
+</resources>

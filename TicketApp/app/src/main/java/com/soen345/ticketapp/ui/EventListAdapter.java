@@ -39,6 +39,7 @@ public class EventListAdapter extends RecyclerView.Adapter<EventListAdapter.VH> 
         Event e = items.get(position);
 
         holder.binding.tvTitle.setText(e.getTitle());
+        holder.binding.tvCategory.setText(e.getCategory());
         holder.binding.tvLocation.setText(e.getLocation());
         holder.binding.tvTime.setText(DateFormat.getDateTimeInstance().format(new Date(e.getDateTimeMillis())));
         holder.binding.tvSeats.setText("Seats: " + e.getAvailableSeats());
@@ -53,6 +54,7 @@ public class EventListAdapter extends RecyclerView.Adapter<EventListAdapter.VH> 
 
     static class VH extends RecyclerView.ViewHolder {
         final RowEventBinding binding;
+
         VH(RowEventBinding binding) {
             super(binding.getRoot());
             this.binding = binding;

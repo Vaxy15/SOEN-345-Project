@@ -4,6 +4,7 @@
 
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
     <application
         android:allowBackup="true"
@@ -32,6 +33,22 @@
 
         <activity
             android:name=".ui.EventDetailsActivity"
+            android:exported="false" />
+
+        <activity
+            android:name=".ui.ProfileSetupActivity"
+            android:exported="false" />
+
+        <activity
+            android:name=".ui.MyReservationsActivity"
+            android:exported="false" />
+
+        <activity
+            android:name=".ui.AdminEventsActivity"
+            android:exported="false" />
+
+        <activity
+            android:name=".ui.AdminEventFormActivity"
             android:exported="false" />
 
         <!-- If you still have MainActivity, keep it NON-launcher or delete it -->

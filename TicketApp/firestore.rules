@@ -1,0 +1,66 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function uid() {
+      return request.auth.uid;
+    }
+
+    function userPath() {
+      return /databases/$(database)/documents/users/$(uid());
+    }
+
+    function isOrganizer() {
+      return signedIn()
+        && exists(userPath())
+        && get(userPath()).data.get('isOrganizer', false) == true;
+    }
+
+    // Avoid diff().affectedKeys() — it often fails on optional fields / number types.
+    function eventImmutableFieldsMatch() {
+      return request.resource.data.title == resource.data.title
+        && request.resource.data.location == resource.data.location
+        && request.resource.data.dateTimeMillis == resource.data.dateTimeMillis
+        && request.resource.data.get('cancelled', false) == resource.data.get('cancelled', false)
+        && request.resource.data.get('category', '') == resource.data.get('category', '');
+    }
+
+    function seatDecrementOk() {
+      return eventImmutableFieldsMatch()
+        && request.resource.data.availableSeats == resource.data.availableSeats - 1
+        && resource.data.availableSeats > 0;
+    }
+
+    function seatIncrementOk() {
+      return eventImmutableFieldsMatch()
+        && request.resource.data.availableSeats == resource.data.availableSeats + 1;
+    }
+
+    match /users/{userId} {
+      allow read: if signedIn() && uid() == userId;
+      allow create: if signedIn() && uid() == userId;
+      allow update: if signedIn() && uid() == userId;
+      allow delete: if false;
+    }
+
+    match /events/{eventId} {
+      allow read: if true;
+      allow create: if isOrganizer();
+      allow delete: if isOrganizer();
+      allow update: if isOrganizer() || (signedIn() && (seatDecrementOk() || seatIncrementOk()));
+    }
+
+    match /reservations/{resId} {
+      allow read: if signedIn() && resource.data.userId == uid();
+      allow create: if signedIn()
+        && request.resource.data.userId == uid()
+        && request.resource.data.keys().hasOnly(['eventId', 'userId', 'eventTitle', 'createdAt']);
+      allow delete: if signedIn() && resource.data.userId == uid();
+      allow update: if false;
+    }
+  }
+}
