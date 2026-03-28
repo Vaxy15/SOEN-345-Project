@@ -51,6 +51,17 @@
             android:name=".ui.AdminEventFormActivity"
             android:exported="false" />
 
+        <!-- Legacy team admin flows (optional entry via deep link / future wiring) -->
+        <activity
+            android:name=".ui.AdminMenuActivity"
+            android:exported="false" />
+        <activity
+            android:name=".ui.AddEventActivity"
+            android:exported="false" />
+        <activity
+            android:name=".ui.EditEventActivity"
+            android:exported="false" />
+
         <!-- If you still have MainActivity, keep it NON-launcher or delete it -->
         <!-- <activity android:name=".MainActivity" android:exported="false" /> -->
 
