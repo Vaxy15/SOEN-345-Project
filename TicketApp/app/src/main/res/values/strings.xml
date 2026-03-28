@@ -8,6 +8,12 @@
     <string name="login_welcome">Welcome back</string>
     <string name="login_tagline">Browse events and book seats in seconds.</string>
     <string name="login_brand">TicketBook</string>
+    <string name="auth_intent_sign_in">Sign in</string>
+    <string name="auth_intent_create_account">Create account</string>
+    <string name="login_as_label">Sign in as</string>
+    <string name="role_customer">Customer</string>
+    <string name="role_administrator">Administrator</string>
+    <string name="organizer_login_denied">This account is not registered as an organizer. Sign in as Customer, or contact support for organizer access.</string>
     <string name="mode_email">Email</string>
     <string name="mode_phone">Phone</string>
     <string name="hint_phone">Phone (+1…)</string>
@@ -15,8 +21,14 @@
     <string name="hint_sms_code">SMS code</string>
     <string name="verify_phone">Verify &amp; sign in</string>
     <string name="profile_setup_title">Complete your profile</string>
+    <string name="profile_setup_organizer_locked">Organizer accounts must manage events. Confirmation preferences still apply.</string>
+    <string name="menu_view_public_events">Browse events (customer view)</string>
     <string name="profile_organizer">I am an event organizer (admin)</string>
-    <string name="profile_confirm_label">Booking confirmations</string>
+    <string name="profile_confirm_label">Receive confirmations via</string>
+    <string name="profile_confirm_email_hint">Email address (for email confirmations)</string>
+    <string name="profile_confirm_phone_hint">Phone (for SMS, include country code e.g. +1…)</string>
+    <string name="profile_confirm_need_email">Enter an email address to receive confirmations by email.</string>
+    <string name="profile_confirm_need_phone">Enter a phone number to receive confirmations by SMS.</string>
     <string name="profile_continue">Continue</string>
     <string name="search_events">Search by title…</string>
     <string name="filter_location">Filter location…</string>
@@ -28,7 +40,7 @@
     <string name="admin_events">Manage events</string>
     <string name="seed_events">Seed sample events</string>
     <string name="seed_events_done">Sample events added</string>
-    <string name="logout">Logout</string>
+    <string name="logout">Log out</string>
     <string name="cancel_reservation">Cancel reservation</string>
     <string name="my_reservations_title">My reservations</string>
     <string name="admin_title">Organizer: events</string>
@@ -50,13 +62,13 @@
     <string name="notification_channel_name">Reservations</string>
     <string name="confirmation_email_subject">Ticket confirmation: %1$s</string>
     <string name="confirmation_send_email">Send confirmation email</string>
-    <string name="confirmation_email_missing">Add an email account in Firebase (email sign-in) to use email confirmations.</string>
-    <string name="confirmation_sms_missing">Phone number not available on this account. Use phone sign-in for SMS confirmations.</string>
+    <string name="confirmation_email_missing">No email on file. Update your profile with an email address for email confirmations.</string>
+    <string name="confirmation_sms_missing">No phone on file. Update your profile with a phone number for SMS confirmations.</string>
     <string-array name="confirmation_options">
-        <item>On-device notification only</item>
-        <item>Email (opens your mail app)</item>
-        <item>SMS (opens Messages)</item>
-        <item>No confirmation</item>
+        <item>Notification on this device</item>
+        <item>Email</item>
+        <item>SMS</item>
+        <item>None</item>
     </string-array>
     <string-array name="confirmation_values">
         <item>DEVICE</item>

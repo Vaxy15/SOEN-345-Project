@@ -56,9 +56,14 @@ public class LoginActivity extends AppCompatActivity {
         setContentView(binding.getRoot());
 
         if (auth.getCurrentUser() != null) {
-            routeAfterAuth();
+            routeRestoredSession();
             return;
         }
+
+        binding.toggleAuthIntent.addOnButtonCheckedListener((group, checkedId, isChecked) -> {
+            if (!isChecked) return;
+            updateAuthIntentUi();
+        });
 
         binding.toggleAuthMode.addOnButtonCheckedListener((group, checkedId, isChecked) -> {
             if (!isChecked) return;
@@ -67,10 +72,31 @@ public class LoginActivity extends AppCompatActivity {
             binding.layoutPhone.setVisibility(email ? View.GONE : View.VISIBLE);
         });
 
+        updateAuthIntentUi();
+
         binding.btnLogin.setOnClickListener(v -> loginEmail());
         binding.btnRegister.setOnClickListener(v -> registerEmail());
         binding.btnSendCode.setOnClickListener(v -> sendPhoneCode());
         binding.btnVerifyPhone.setOnClickListener(v -> verifyPhoneCode());
+    }
+
+    private boolean isSignInIntent() {
+        return binding.toggleAuthIntent.getCheckedButtonId() == R.id.btnIntentSignIn;
+    }
+
+    /** Administrator portal only applies when signing in, not when creating an account. */
+    private boolean isAdministratorLogin() {
+        if (!isSignInIntent()) {
+            return false;
+        }
+        return binding.toggleLoginRole.getCheckedButtonId() == R.id.btnRoleAdmin;
+    }
+
+    private void updateAuthIntentUi() {
+        boolean signIn = isSignInIntent();
+        binding.layoutLoginRole.setVisibility(signIn ? View.VISIBLE : View.GONE);
+        binding.btnLogin.setVisibility(signIn ? View.VISIBLE : View.GONE);
+        binding.btnRegister.setVisibility(signIn ? View.GONE : View.VISIBLE);
     }
 
     private void loginEmail() {
@@ -96,7 +122,9 @@ public class LoginActivity extends AppCompatActivity {
         }
         auth.createUserWithEmailAndPassword(email, pass)
             .addOnSuccessListener(res -> {
-                startActivity(new Intent(this, ProfileSetupActivity.class));
+                Intent i = new Intent(this, ProfileSetupActivity.class);
+                i.putExtra(ProfileSetupActivity.EXTRA_REQUIRE_ORGANIZER, false);
+                startActivity(i);
                 finish();
             })
             .addOnFailureListener(e ->
@@ -142,18 +170,62 @@ public class LoginActivity extends AppCompatActivity {
             );
     }
 
+    /** User already signed in (e.g. app restart): route by profile, not by login form toggle. */
+    private void routeRestoredSession() {
+        FirebaseUser user = auth.getCurrentUser();
+        if (user == null) return;
+
+        db.collection("users").document(user.getUid()).get()
+            .addOnSuccessListener(doc -> {
+                if (!doc.exists()) {
+                    startActivity(new Intent(this, ProfileSetupActivity.class));
+                    finish();
+                    return;
+                }
+                boolean isOrganizer = Boolean.TRUE.equals(doc.getBoolean("isOrganizer"));
+                if (isOrganizer) {
+                    startActivity(new Intent(this, AdminEventsActivity.class));
+                } else {
+                    startActivity(new Intent(this, EventListActivity.class));
+                }
+                finish();
+            })
+            .addOnFailureListener(e ->
+                Toast.makeText(this, "Could not load profile: " + e.getMessage(), Toast.LENGTH_LONG).show()
+            );
+    }
+
     private void routeAfterAuth() {
         FirebaseUser user = auth.getCurrentUser();
         if (user == null) {
             return;
         }
+        final boolean adminLogin = isAdministratorLogin();
+
         db.collection("users").document(user.getUid()).get()
             .addOnSuccessListener(doc -> {
                 if (!doc.exists()) {
-                    startActivity(new Intent(this, ProfileSetupActivity.class));
-                } else {
-                    startActivity(new Intent(this, EventListActivity.class));
+                    Intent i = new Intent(this, ProfileSetupActivity.class);
+                    i.putExtra(ProfileSetupActivity.EXTRA_REQUIRE_ORGANIZER, adminLogin);
+                    startActivity(i);
+                    finish();
+                    return;
                 }
+
+                boolean isOrganizer = Boolean.TRUE.equals(doc.getBoolean("isOrganizer"));
+
+                if (adminLogin) {
+                    if (!isOrganizer) {
+                        Toast.makeText(this, R.string.organizer_login_denied, Toast.LENGTH_LONG).show();
+                        auth.signOut();
+                        return;
+                    }
+                    startActivity(new Intent(this, AdminEventsActivity.class));
+                    finish();
+                    return;
+                }
+
+                startActivity(new Intent(this, EventListActivity.class));
                 finish();
             })
             .addOnFailureListener(e ->

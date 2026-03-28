@@ -5,6 +5,7 @@ import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.os.Build;
 import android.os.Bundle;
+import android.view.View;
 import android.widget.ArrayAdapter;
 import android.widget.Toast;
 
@@ -18,11 +19,14 @@ import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.soen345.ticketapp.R;
 import com.soen345.ticketapp.databinding.ActivityProfileSetupBinding;
+import com.soen345.ticketapp.notify.ConfirmationHelper;
 
 import java.util.HashMap;
 import java.util.Map;
 
 public class ProfileSetupActivity extends AppCompatActivity {
+
+    public static final String EXTRA_REQUIRE_ORGANIZER = "require_organizer";
 
     private static final int REQ_POST_NOTIFICATIONS = 1001;
 
@@ -42,6 +46,26 @@ public class ProfileSetupActivity extends AppCompatActivity {
         );
         adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
         binding.spConfirmation.setAdapter(adapter);
+
+        FirebaseUser existing = FirebaseAuth.getInstance().getCurrentUser();
+        if (existing != null) {
+            if (existing.getEmail() != null) {
+                binding.etConfirmationEmail.setText(existing.getEmail());
+            }
+            if (existing.getPhoneNumber() != null) {
+                binding.etConfirmationPhone.setText(existing.getPhoneNumber());
+            }
+        }
+
+        boolean requireOrganizer = getIntent().getBooleanExtra(EXTRA_REQUIRE_ORGANIZER, false);
+        if (requireOrganizer) {
+            binding.cbOrganizer.setChecked(true);
+            binding.cbOrganizer.setEnabled(false);
+            binding.tvOrganizerLockedHint.setVisibility(View.VISIBLE);
+        } else {
+            binding.cbOrganizer.setVisibility(View.GONE);
+            binding.tvOrganizerLockedHint.setVisibility(View.GONE);
+        }
 
         binding.btnContinue.setOnClickListener(v -> saveProfile());
     }
@@ -93,14 +117,30 @@ public class ProfileSetupActivity extends AppCompatActivity {
         if (idx < 0 || idx >= values.length) idx = 0;
         String channel = values[idx];
 
+        String emailInput = binding.etConfirmationEmail.getText().toString().trim();
+        String phoneInput = binding.etConfirmationPhone.getText().toString().trim();
+        String resolvedEmail = !emailInput.isEmpty() ? emailInput
+            : (user.getEmail() != null ? user.getEmail().trim() : "");
+        String resolvedPhone = !phoneInput.isEmpty() ? phoneInput
+            : (user.getPhoneNumber() != null ? user.getPhoneNumber().trim() : "");
+
+        if (ConfirmationHelper.CHANNEL_EMAIL.equals(channel) && resolvedEmail.isEmpty()) {
+            Toast.makeText(this, R.string.profile_confirm_need_email, Toast.LENGTH_LONG).show();
+            return;
+        }
+        if (ConfirmationHelper.CHANNEL_SMS.equals(channel) && resolvedPhone.isEmpty()) {
+            Toast.makeText(this, R.string.profile_confirm_need_phone, Toast.LENGTH_LONG).show();
+            return;
+        }
+
         Map<String, Object> data = new HashMap<>();
         data.put("confirmationChannel", channel);
         data.put("isOrganizer", binding.cbOrganizer.isChecked());
-        if (user.getEmail() != null) {
-            data.put("email", user.getEmail());
+        if (!resolvedEmail.isEmpty()) {
+            data.put("email", resolvedEmail);
         }
-        if (user.getPhoneNumber() != null) {
-            data.put("phone", user.getPhoneNumber());
+        if (!resolvedPhone.isEmpty()) {
+            data.put("phone", resolvedPhone);
         }
 
         FirebaseFirestore.getInstance()
@@ -108,7 +148,10 @@ public class ProfileSetupActivity extends AppCompatActivity {
             .document(user.getUid())
             .set(data)
             .addOnSuccessListener(unused -> {
-                startActivity(new Intent(this, EventListActivity.class));
+                Class<?> next = binding.cbOrganizer.isChecked()
+                    ? AdminEventsActivity.class
+                    : EventListActivity.class;
+                startActivity(new Intent(this, next));
                 finish();
             })
             .addOnFailureListener(e ->

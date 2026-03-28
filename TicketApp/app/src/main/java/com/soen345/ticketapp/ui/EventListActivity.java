@@ -4,6 +4,7 @@ import android.content.Intent;
 import android.os.Bundle;
 import android.text.Editable;
 import android.text.TextWatcher;
+import android.view.MenuItem;
 import android.view.View;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
@@ -51,6 +52,8 @@ public class EventListActivity extends AppCompatActivity implements EventListAda
         binding = ActivityEventListBinding.inflate(getLayoutInflater());
         setContentView(binding.getRoot());
         setSupportActionBar(binding.toolbar);
+        binding.toolbar.inflateMenu(R.menu.menu_event_list);
+        binding.toolbar.setOnMenuItemClickListener(this::onToolbarMenuItem);
 
         adapter = new EventListAdapter(displayEvents, this);
         binding.recycler.setLayoutManager(new LinearLayoutManager(this));
@@ -105,13 +108,25 @@ public class EventListActivity extends AppCompatActivity implements EventListAda
         binding.btnAdmin.setOnClickListener(v ->
             startActivity(new Intent(this, AdminEventsActivity.class)));
 
-        binding.btnLogout.setOnClickListener(v -> {
-            authService.signOut();
-            startActivity(new Intent(this, LoginActivity.class));
-            finish();
-        });
+        binding.btnLogout.setOnClickListener(v -> signOutAndGoToLogin());
 
         binding.btnSeed.setOnClickListener(v -> seedSampleEvents());
+    }
+
+    private boolean onToolbarMenuItem(MenuItem item) {
+        if (item.getItemId() == R.id.action_sign_out) {
+            signOutAndGoToLogin();
+            return true;
+        }
+        return false;
+    }
+
+    private void signOutAndGoToLogin() {
+        authService.signOut();
+        Intent i = new Intent(this, LoginActivity.class);
+        i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+        startActivity(i);
+        finish();
     }
 
     @Override

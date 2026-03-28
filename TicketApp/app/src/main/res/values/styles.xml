@@ -20,4 +20,9 @@
     <style name="Widget.TicketApp.CardList" parent="Widget.TicketApp.Card">
         <item name="cardCornerRadius">@dimen/card_corner_sm</item>
     </style>
+
+    <!-- Login fields: avoid helper text strip that can feel like an extra popup on focus. -->
+    <style name="Widget.TicketApp.TextInputLayout.Login" parent="Widget.MaterialComponents.TextInputLayout.OutlinedBox">
+        <item name="helperTextEnabled">false</item>
+    </style>
 </resources>

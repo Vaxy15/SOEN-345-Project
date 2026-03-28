@@ -97,13 +97,19 @@ public class EventDetailsActivity extends AppCompatActivity {
                             ch = doc.getString("confirmationChannel");
                         }
                         if (cachedEvent != null) {
-                            ConfirmationHelper.deliver(
-                                this,
-                                ch,
-                                cachedEvent,
-                                user.getEmail(),
-                                user.getPhoneNumber()
-                            );
+                            String email = user.getEmail();
+                            String phone = user.getPhoneNumber();
+                            if (doc.exists()) {
+                                String docEmail = doc.getString("email");
+                                if (docEmail != null && !docEmail.isEmpty()) {
+                                    email = docEmail;
+                                }
+                                String docPhone = doc.getString("phone");
+                                if (docPhone != null && !docPhone.isEmpty()) {
+                                    phone = docPhone;
+                                }
+                            }
+                            ConfirmationHelper.deliver(this, ch, cachedEvent, email, phone);
                         }
                     });
             })

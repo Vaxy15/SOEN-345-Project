@@ -53,8 +53,8 @@ public final class ConfirmationHelper {
                 Toast.makeText(context, R.string.confirmation_sms_missing, Toast.LENGTH_LONG).show();
                 return;
             }
-            String uri = "smsto:" + digits;
-            Intent sms = new Intent(Intent.ACTION_VIEW, Uri.parse(uri));
+            Uri dest = Uri.fromParts("smsto", digits, null);
+            Intent sms = new Intent(Intent.ACTION_SENDTO, dest);
             sms.putExtra("sms_body", body);
             sms.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
             context.startActivity(sms);

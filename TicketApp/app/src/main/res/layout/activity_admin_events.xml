@@ -28,13 +28,32 @@
         android:paddingEnd="@dimen/padding_screen"
         android:paddingTop="8dp" />
 
-    <com.google.android.material.button.MaterialButton
-        android:id="@+id/btnAdd"
+    <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_margin="@dimen/padding_screen"
-        android:paddingTop="14dp"
-        android:paddingBottom="14dp"
-        android:text="@string/add_event"
-        app:cornerRadius="12dp" />
+        android:orientation="horizontal">
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnLogout"
+            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginEnd="8dp"
+            android:layout_weight="1"
+            android:paddingTop="14dp"
+            android:paddingBottom="14dp"
+            android:text="@string/logout"
+            app:cornerRadius="12dp" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnAdd"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:paddingTop="14dp"
+            android:paddingBottom="14dp"
+            android:text="@string/add_event"
+            app:cornerRadius="12dp" />
+    </LinearLayout>
 </LinearLayout>
