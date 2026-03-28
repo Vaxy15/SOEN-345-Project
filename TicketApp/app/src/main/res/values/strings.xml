@@ -39,6 +39,13 @@
     <string name="event_cancelled_label">Cancelled</string>
     <string name="hint_title">Title</string>
     <string name="hint_seats">Available seats</string>
+    <string name="event_name_hint">Event name</string>
+    <string name="event_date_hint">Event date (dd/mm/yyyy)</string>
+    <string name="event_location_hint">Location</string>
+    <string name="available_seats_hint">Available seats</string>
+    <string name="event_description_hint">Description (optional)</string>
+    <string name="save_event_button">Save event</string>
+    <string name="update_event_button">Update event</string>
     <string name="pick_date_time">Pick date &amp; time</string>
     <string name="notification_channel_name">Reservations</string>
     <string name="confirmation_email_subject">Ticket confirmation: %1$s</string>
