@@ -42,8 +42,7 @@ public class ReservationAdapter extends RecyclerView.Adapter<ReservationAdapter.
             title = "Event";
         }
         holder.binding.tvTitle.setText(title);
-        holder.binding.tvWhen.setText(DateFormat.getDateTimeInstance().format(new Date(r.getCreatedAt())));
-        holder.binding.btnCancel.setOnClickListener(v -> listener.onCancel(r));
+        holder.binding.tvReservedAt.setText(DateFormat.getDateTimeInstance().format(new Date(r.getCreatedAt())));        holder.binding.btnCancel.setOnClickListener(v -> listener.onCancel(r));
     }
 
     @Override

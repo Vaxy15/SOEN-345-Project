@@ -42,7 +42,7 @@ public class BookingRepository {
             if (e == null) {
                 throw new FirebaseFirestoreException("Invalid event", FirebaseFirestoreException.Code.ABORTED);
             }
-            if (e.getCancelled()) {
+            if (e.isCancelled()) {
                 throw new FirebaseFirestoreException("This event was cancelled", FirebaseFirestoreException.Code.FAILED_PRECONDITION);
             }
             if (e.getAvailableSeats() <= 0) {

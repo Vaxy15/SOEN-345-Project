@@ -2,285 +2,127 @@ package com.soen345.ticketapp.ui;
 
 import android.content.Intent;
 import android.os.Bundle;
-import android.text.Editable;
-import android.text.TextWatcher;
-import android.view.MenuItem;
+import android.view.LayoutInflater;
 import android.view.View;
-import android.widget.AdapterView;
-import android.widget.ArrayAdapter;
-import android.widget.Toast;
+import android.view.ViewGroup;
+import android.widget.TextView;
 
+import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
 
-import com.google.android.material.datepicker.MaterialDatePicker;
+import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.firestore.FirebaseFirestore;
-import com.google.firebase.firestore.ListenerRegistration;
+import com.google.firebase.firestore.QueryDocumentSnapshot;
 import com.soen345.ticketapp.R;
-import com.soen345.ticketapp.auth.AuthService;
-import com.soen345.ticketapp.databinding.ActivityEventListBinding;
+import com.soen345.ticketapp.auth.LoginActivity;
 import com.soen345.ticketapp.model.Event;
 
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
-import java.util.Calendar;
+import java.util.Date;
 import java.util.List;
 import java.util.Locale;
 
-public class EventListActivity extends AppCompatActivity implements EventListAdapter.OnEventClick {
+public class EventListActivity extends AppCompatActivity {
 
-    private ActivityEventListBinding binding;
-    private final AuthService authService = new AuthService();
+    private RecyclerView recycler;
+    private EventAdapter adapter;
+    private List<Event>  events = new ArrayList<>();
 
-    private final List<Event> allEvents = new ArrayList<>();
-    private final List<Event> displayEvents = new ArrayList<>();
-    private EventListAdapter adapter;
-    private ListenerRegistration listener;
-
-    private Long filterFromStartMillis;
-    private Long filterToEndMillis;
+    private FirebaseAuth      auth;
+    private FirebaseFirestore db;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_event_list);
 
-        if (authService.currentUser() == null) {
+        auth = FirebaseAuth.getInstance();
+        db   = FirebaseFirestore.getInstance();
+
+        recycler = findViewById(R.id.recycler);
+        recycler.setLayoutManager(new LinearLayoutManager(this));
+        adapter = new EventAdapter();
+        recycler.setAdapter(adapter);
+
+        findViewById(R.id.btnLogout).setOnClickListener(v -> {
+            auth.signOut();
             startActivity(new Intent(this, LoginActivity.class));
             finish();
-            return;
-        }
+        });
 
-        binding = ActivityEventListBinding.inflate(getLayoutInflater());
-        setContentView(binding.getRoot());
-        setSupportActionBar(binding.toolbar);
-        binding.toolbar.inflateMenu(R.menu.menu_event_list);
-        binding.toolbar.setOnMenuItemClickListener(this::onToolbarMenuItem);
-
-        adapter = new EventListAdapter(displayEvents, this);
-        binding.recycler.setLayoutManager(new LinearLayoutManager(this));
-        binding.recycler.setAdapter(adapter);
-
-        ArrayAdapter<CharSequence> catAdapter = ArrayAdapter.createFromResource(
-            this,
-            R.array.event_categories,
-            android.R.layout.simple_spinner_item
+        findViewById(R.id.btnSearch).setOnClickListener(v ->
+                startActivity(new Intent(this, SearchActivity.class))
         );
-        catAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
-        binding.spCategory.setAdapter(catAdapter);
-        binding.spCategory.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
-            @Override
-            public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
-                applyFilters();
-            }
 
-            @Override
-            public void onNothingSelected(AdapterView<?> parent) {}
-        });
+        findViewById(R.id.btnMyReservations).setOnClickListener(v ->
+                startActivity(new Intent(this, MyReservationsActivity.class))
+        );
 
-        TextWatcher tw = new TextWatcher() {
-            @Override
-            public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
-
-            @Override
-            public void onTextChanged(CharSequence s, int start, int before, int count) {
-                applyFilters();
-            }
-
-            @Override
-            public void afterTextChanged(Editable s) {}
-        };
-        binding.etSearch.addTextChangedListener(tw);
-        binding.etFilterLocation.addTextChangedListener(tw);
-
-        binding.btnFromDate.setOnClickListener(v -> pickDate(true));
-        binding.btnToDate.setOnClickListener(v -> pickDate(false));
-        binding.btnClearFilters.setOnClickListener(v -> {
-            binding.etSearch.setText("");
-            binding.etFilterLocation.setText("");
-            binding.spCategory.setSelection(0);
-            filterFromStartMillis = null;
-            filterToEndMillis = null;
-            applyFilters();
-        });
-
-        binding.btnMyReservations.setOnClickListener(v ->
-            startActivity(new Intent(this, MyReservationsActivity.class)));
-
-        binding.btnAdmin.setOnClickListener(v ->
-            startActivity(new Intent(this, AdminEventsActivity.class)));
-
-        binding.btnLogout.setOnClickListener(v -> signOutAndGoToLogin());
-
-        binding.btnSeed.setOnClickListener(v -> seedSampleEvents());
+        loadEvents();
     }
 
-    private boolean onToolbarMenuItem(MenuItem item) {
-        if (item.getItemId() == R.id.action_sign_out) {
-            signOutAndGoToLogin();
-            return true;
-        }
-        return false;
-    }
-
-    private void signOutAndGoToLogin() {
-        authService.signOut();
-        Intent i = new Intent(this, LoginActivity.class);
-        i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
-        startActivity(i);
-        finish();
-    }
-
-    @Override
-    protected void onStart() {
-        super.onStart();
-        if (authService.currentUser() == null) {
-            return;
-        }
-        FirebaseFirestore.getInstance()
-            .collection("users")
-            .document(authService.currentUser().getUid())
-            .get()
-            .addOnSuccessListener(doc -> {
-                if (isFinishing()) return;
-                if (!doc.exists()) {
-                    startActivity(new Intent(this, ProfileSetupActivity.class));
-                    finish();
-                    return;
-                }
-                loadOrganizerFlag();
-                subscribeEvents();
-            })
-            .addOnFailureListener(e ->
-                Toast.makeText(this, "Could not verify profile: " + e.getMessage(), Toast.LENGTH_LONG).show()
-            );
-    }
-
-    private void subscribeEvents() {
-        if (listener != null) {
-            listener.remove();
-            listener = null;
-        }
-        listener = FirebaseFirestore.getInstance()
-            .collection("events")
-            .addSnapshotListener((snap, err) -> {
-                if (err != null) {
-                    Toast.makeText(this, "Firestore error: " + err.getMessage(), Toast.LENGTH_LONG).show();
-                    return;
-                }
-                allEvents.clear();
-                if (snap != null) {
-                    snap.getDocuments().forEach(doc -> {
+    private void loadEvents() {
+        db.collection("events")
+                .whereEqualTo("cancelled", false)
+                .get()
+                .addOnSuccessListener(snapshot -> {
+                    events.clear();
+                    for (QueryDocumentSnapshot doc : snapshot) {
                         Event e = doc.toObject(Event.class);
-                        if (e != null) {
-                            e.setId(doc.getId());
-                            if (!e.getCancelled()) {
-                                allEvents.add(e);
-                            }
-                        }
-                    });
-                }
-                applyFilters();
-            });
+                        e.setId(doc.getId());
+                        events.add(e);
+                    }
+                    adapter.notifyDataSetChanged();
+                });
     }
 
-    private void loadOrganizerFlag() {
-        if (authService.currentUser() == null) return;
-        FirebaseFirestore.getInstance()
-            .collection("users")
-            .document(authService.currentUser().getUid())
-            .get()
-            .addOnSuccessListener(doc -> {
-                boolean org = Boolean.TRUE.equals(doc.getBoolean("isOrganizer"));
-                binding.btnAdmin.setVisibility(org ? View.VISIBLE : View.GONE);
-                binding.btnSeed.setVisibility(org ? View.VISIBLE : View.GONE);
-            });
+    private static String formatDate(long millis) {
+        return new SimpleDateFormat("MMM dd, yyyy  HH:mm", Locale.getDefault())
+                .format(new Date(millis));
     }
 
-    @Override
-    protected void onStop() {
-        super.onStop();
-        if (listener != null) listener.remove();
-    }
+    class EventAdapter extends RecyclerView.Adapter<EventAdapter.VH> {
 
-    private void pickDate(boolean isFrom) {
-        MaterialDatePicker<Long> picker = MaterialDatePicker.Builder.datePicker()
-            .setTitleText(isFrom ? getString(R.string.filter_date_from) : getString(R.string.filter_date_to))
-            .build();
-        picker.addOnPositiveButtonClickListener(selection -> {
-            if (isFrom) {
-                filterFromStartMillis = startOfDay(selection);
-            } else {
-                filterToEndMillis = endOfDay(selection);
-            }
-            applyFilters();
-        });
-        picker.show(getSupportFragmentManager(), isFrom ? "from" : "to");
-    }
-
-    private static long startOfDay(long utcMillisFromPicker) {
-        Calendar c = Calendar.getInstance();
-        c.setTimeInMillis(utcMillisFromPicker);
-        c.set(Calendar.HOUR_OF_DAY, 0);
-        c.set(Calendar.MINUTE, 0);
-        c.set(Calendar.SECOND, 0);
-        c.set(Calendar.MILLISECOND, 0);
-        return c.getTimeInMillis();
-    }
-
-    private static long endOfDay(long utcMillisFromPicker) {
-        Calendar c = Calendar.getInstance();
-        c.setTimeInMillis(utcMillisFromPicker);
-        c.set(Calendar.HOUR_OF_DAY, 23);
-        c.set(Calendar.MINUTE, 59);
-        c.set(Calendar.SECOND, 59);
-        c.set(Calendar.MILLISECOND, 999);
-        return c.getTimeInMillis();
-    }
-
-    private void applyFilters() {
-        String q = binding.etSearch.getText().toString().trim().toLowerCase(Locale.getDefault());
-        String loc = binding.etFilterLocation.getText().toString().trim().toLowerCase(Locale.getDefault());
-        int catPos = binding.spCategory.getSelectedItemPosition();
-        String[] cats = getResources().getStringArray(R.array.event_categories);
-        String catFilter = (catPos <= 0 || catPos >= cats.length) ? null : cats[catPos];
-
-        displayEvents.clear();
-        for (Event e : allEvents) {
-            if (!q.isEmpty() && !e.getTitle().toLowerCase(Locale.getDefault()).contains(q)) {
-                continue;
-            }
-            if (!loc.isEmpty() && !e.getLocation().toLowerCase(Locale.getDefault()).contains(loc)) {
-                continue;
-            }
-            if (catFilter != null && !catFilter.equalsIgnoreCase(e.getCategory())) {
-                continue;
-            }
-            if (filterFromStartMillis != null && e.getDateTimeMillis() < filterFromStartMillis) {
-                continue;
-            }
-            if (filterToEndMillis != null && e.getDateTimeMillis() > filterToEndMillis) {
-                continue;
-            }
-            displayEvents.add(e);
+        @NonNull @Override
+        public VH onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
+            View v = LayoutInflater.from(parent.getContext())
+                    .inflate(R.layout.row_event, parent, false);
+            return new VH(v);
         }
-        adapter.notifyDataSetChanged();
-    }
 
-    @Override
-    public void onClick(Event event) {
-        Intent i = new Intent(this, EventDetailsActivity.class);
-        i.putExtra("eventId", event.getId());
-        startActivity(i);
-    }
+        @Override
+        public void onBindViewHolder(@NonNull VH h, int pos) {
+            Event e = events.get(pos);
+            h.tvTitle.setText(e.getTitle());
+            h.tvLocation.setText(e.getLocation());
+            h.tvTime.setText(e.getTime());
+            h.tvSeats.setText("Seats: " + e.getAvailableSeats());
 
-    private void seedSampleEvents() {
-        FirebaseFirestore db = FirebaseFirestore.getInstance();
-        long now = System.currentTimeMillis();
+            h.itemView.setOnClickListener(v -> {
+                Intent intent = new Intent(EventListActivity.this, EventDetailsActivity.class);
+                intent.putExtra("eventId",          e.getId());
+                intent.putExtra("eventTitle",       e.getTitle());
+                intent.putExtra("location",         e.getLocation());
+                intent.putExtra("dateTimeMillis",   e.getDateTimeMillis()); // long
+                intent.putExtra("seats",            e.getAvailableSeats());
+                startActivity(intent);
+            });
+        }
 
-        db.collection("events").add(new Event("Concert Night", "Downtown Hall", "Music", now + 86400000L, 120));
-        db.collection("events").add(new Event("Varsity Game", "University Stadium", "Sports", now + 172800000L, 800));
-        db.collection("events").add(new Event("Indie Film Night", "Campus Theatre", "Movies", now + 259200000L, 80));
-        db.collection("events").add(new Event("City Tour", "Old Port", "Travel", now + 345600000L, 40));
+        @Override public int getItemCount() { return events.size(); }
 
-        Toast.makeText(this, R.string.seed_events_done, Toast.LENGTH_SHORT).show();
+        class VH extends RecyclerView.ViewHolder {
+            TextView tvTitle, tvLocation, tvTime, tvSeats;
+            VH(View v) {
+                super(v);
+                tvTitle    = v.findViewById(R.id.tvTitle);
+                tvLocation = v.findViewById(R.id.tvLocation);
+                tvTime     = v.findViewById(R.id.tvTime);
+                tvSeats    = v.findViewById(R.id.tvSeats);
+            }
+        }
     }
 }

@@ -67,12 +67,11 @@ public final class ConfirmationHelper {
     }
 
     private static String buildBody(Event event) {
-        String when = DateFormat.getDateTimeInstance().format(new Date(event.getDateTimeMillis()));
         return "Reservation confirmed\n"
-            + event.getTitle() + "\n"
-            + event.getLocation() + "\n"
-            + when + "\n"
-            + "Category: " + event.getCategory();
+                + event.getTitle() + "\n"
+                + event.getLocation() + "\n"
+                + event.getTime() + "\n"
+                + "Category: " + event.getCategory();
     }
 
     private static void postDeviceNotification(Context context, String title, String text) {

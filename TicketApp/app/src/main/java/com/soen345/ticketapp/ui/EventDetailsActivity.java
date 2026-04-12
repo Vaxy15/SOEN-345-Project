@@ -2,119 +2,145 @@ package com.soen345.ticketapp.ui;
 
 import android.os.Bundle;
 import android.view.View;
+import android.widget.Button;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
 
-import com.google.firebase.auth.FirebaseUser;
+import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.firestore.FirebaseFirestore;
-import com.soen345.ticketapp.auth.AuthService;
-import com.soen345.ticketapp.data.BookingRepository;
-import com.soen345.ticketapp.databinding.ActivityEventDetailsBinding;
-import com.soen345.ticketapp.model.Event;
-import com.soen345.ticketapp.notify.ConfirmationHelper;
+import com.soen345.ticketapp.R;
+import com.soen345.ticketapp.model.Reservation;
+import com.soen345.ticketapp.notify.NotificationHelper;
 
-import java.text.DateFormat;
+import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.Locale;
 
 public class EventDetailsActivity extends AppCompatActivity {
 
-    private ActivityEventDetailsBinding binding;
-    private final AuthService authService = new AuthService();
-    private final BookingRepository bookingRepository = new BookingRepository();
+    private TextView tvTitle, tvLocation, tvTime, tvSeats;
+    private Button   btnReserve, btnCancelReservation, btnBack;
 
-    private Event cachedEvent;
+    private FirebaseFirestore db;
+    private FirebaseAuth      auth;
+
+    private String eventId, eventTitle, location;
+    private long   dateTimeMillis;
+    private int    seats;
+    private String existingReservationId = null;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_event_details);
 
-        binding = ActivityEventDetailsBinding.inflate(getLayoutInflater());
-        setContentView(binding.getRoot());
-        setSupportActionBar(binding.toolbar);
-        binding.toolbar.setNavigationOnClickListener(v -> getOnBackPressedDispatcher().onBackPressed());
+        db   = FirebaseFirestore.getInstance();
+        auth = FirebaseAuth.getInstance();
 
-        String eventId = getIntent().getStringExtra("eventId");
-        if (eventId == null) {
-            finish();
+        tvTitle              = findViewById(R.id.tvTitle);
+        tvLocation           = findViewById(R.id.tvLocation);
+        tvTime               = findViewById(R.id.tvTime);
+        tvSeats              = findViewById(R.id.tvSeats);
+        btnReserve           = findViewById(R.id.btnReserve);
+        btnCancelReservation = findViewById(R.id.btnCancelReservation);
+        btnBack              = findViewById(R.id.btnBack);
+
+        eventId        = getIntent().getStringExtra("eventId");
+        eventTitle     = getIntent().getStringExtra("eventTitle");
+        location       = getIntent().getStringExtra("location");
+        dateTimeMillis = getIntent().getLongExtra("dateTimeMillis", 0L);
+        seats          = getIntent().getIntExtra("seats", 0);
+
+        String formatted = new SimpleDateFormat("MMM dd, yyyy  HH:mm", Locale.getDefault())
+                .format(new Date(dateTimeMillis));
+
+        tvTitle.setText(eventTitle);
+        tvLocation.setText(location);
+        tvTime.setText(formatted);
+        tvSeats.setText(String.valueOf(seats));
+
+        btnBack.setOnClickListener(v -> finish());
+        btnReserve.setOnClickListener(v -> reserveTicket());
+        btnCancelReservation.setOnClickListener(v -> cancelReservation());
+
+        checkExistingReservation();
+    }
+
+    private void checkExistingReservation() {
+        if (auth.getCurrentUser() == null) return;
+        String uid = auth.getCurrentUser().getUid();
+        db.collection("reservations")
+                .whereEqualTo("userId", uid)
+                .whereEqualTo("eventId", eventId)
+                .get()
+                .addOnSuccessListener(snapshot -> {
+                    if (!snapshot.isEmpty()) {
+                        existingReservationId = snapshot.getDocuments().get(0).getId();
+                        btnReserve.setVisibility(View.GONE);
+                        btnCancelReservation.setVisibility(View.VISIBLE);
+                    }
+                });
+    }
+
+    private void reserveTicket() {
+        if (seats <= 0) {
+            Toast.makeText(this, "No seats available", Toast.LENGTH_SHORT).show();
             return;
         }
 
-        loadEvent(eventId);
-        binding.btnReserve.setOnClickListener(v -> reserve(eventId));
+        String uid = auth.getCurrentUser().getUid();
+        btnReserve.setEnabled(false);
+
+        Reservation r = new Reservation();
+        r.setUserId(uid);
+        r.setEventId(eventId);
+        r.setEventTitle(eventTitle);
+        r.setEventLocation(location);
+        r.setEventDateTimeMillis(dateTimeMillis);
+        r.setCreatedAt(System.currentTimeMillis());
+
+        db.collection("reservations").add(r)
+                .addOnSuccessListener(ref -> {
+                    existingReservationId = ref.getId();
+                    db.collection("events").document(eventId)
+                            .update("availableSeats", seats - 1);
+
+                    NotificationHelper.sendConfirmation(this, eventTitle, location,
+                            new SimpleDateFormat("MMM dd, yyyy HH:mm", Locale.getDefault())
+                                    .format(new Date(dateTimeMillis)));
+
+                    seats--;
+                    tvSeats.setText("Available Seats: " + seats);
+                    btnReserve.setVisibility(View.GONE);
+                    btnCancelReservation.setVisibility(View.VISIBLE);
+                    Toast.makeText(this, "Ticket reserved!", Toast.LENGTH_LONG).show();
+                })
+                .addOnFailureListener(e -> {
+                    btnReserve.setEnabled(true);
+                    Toast.makeText(this, "Failed: " + e.getMessage(), Toast.LENGTH_LONG).show();
+                });
     }
 
-    private void loadEvent(String eventId) {
-        FirebaseFirestore.getInstance()
-            .collection("events")
-            .document(eventId)
-            .get()
-            .addOnSuccessListener(doc -> {
-                Event e = doc.toObject(Event.class);
-                if (e == null) return;
-                e.setId(doc.getId());
-                cachedEvent = e;
+    private void cancelReservation() {
+        if (existingReservationId == null) return;
 
-                    binding.toolbar.setTitle(e.getTitle());
-                    binding.tvTitle.setText(e.getTitle());
-                binding.tvCategory.setText(e.getCategory());
-                binding.tvLocation.setText(e.getLocation());
-                binding.tvTime.setText(DateFormat.getDateTimeInstance().format(new Date(e.getDateTimeMillis())));
-                binding.tvSeats.setText("Seats: " + e.getAvailableSeats());
-
-                boolean cancelled = e.getCancelled();
-                binding.tvCancelled.setVisibility(cancelled ? View.VISIBLE : View.GONE);
-                binding.btnReserve.setEnabled(!cancelled && e.getAvailableSeats() > 0);
-            })
-            .addOnFailureListener(e ->
-                Toast.makeText(this, "Load failed: " + e.getMessage(), Toast.LENGTH_LONG).show()
-            );
-    }
-
-    private void reserve(String eventId) {
-        FirebaseUser user = authService.currentUser();
-        if (user == null) {
-            Toast.makeText(this, "Not logged in", Toast.LENGTH_SHORT).show();
-            finish();
-            return;
-        }
-
-        bookingRepository.reserveSeat(eventId, user.getUid())
-            .addOnSuccessListener(reservationId -> {
-                Toast.makeText(this, "Reservation created", Toast.LENGTH_SHORT).show();
-                if (cachedEvent != null) {
-                    cachedEvent.setAvailableSeats(Math.max(0, cachedEvent.getAvailableSeats() - 1));
-                    binding.tvSeats.setText("Seats: " + cachedEvent.getAvailableSeats());
-                    binding.btnReserve.setEnabled(!cachedEvent.getCancelled() && cachedEvent.getAvailableSeats() > 0);
-                }
-                FirebaseFirestore.getInstance()
-                    .collection("users")
-                    .document(user.getUid())
-                    .get()
-                    .addOnSuccessListener(doc -> {
-                        String ch = ConfirmationHelper.CHANNEL_DEVICE;
-                        if (doc.exists() && doc.getString("confirmationChannel") != null) {
-                            ch = doc.getString("confirmationChannel");
-                        }
-                        if (cachedEvent != null) {
-                            String email = user.getEmail();
-                            String phone = user.getPhoneNumber();
-                            if (doc.exists()) {
-                                String docEmail = doc.getString("email");
-                                if (docEmail != null && !docEmail.isEmpty()) {
-                                    email = docEmail;
-                                }
-                                String docPhone = doc.getString("phone");
-                                if (docPhone != null && !docPhone.isEmpty()) {
-                                    phone = docPhone;
-                                }
-                            }
-                            ConfirmationHelper.deliver(this, ch, cachedEvent, email, phone);
-                        }
-                    });
-            })
-            .addOnFailureListener(e ->
-                Toast.makeText(this, e.getMessage() != null ? e.getMessage() : "Reserve failed", Toast.LENGTH_LONG).show()
-            );
+        db.collection("reservations").document(existingReservationId)
+                .delete()
+                .addOnSuccessListener(v -> {
+                    db.collection("events").document(eventId)
+                            .update("availableSeats", seats + 1);
+                    seats++;
+                    tvSeats.setText("Available Seats: " + seats);
+                    existingReservationId = null;
+                    btnCancelReservation.setVisibility(View.GONE);
+                    btnReserve.setVisibility(View.VISIBLE);
+                    btnReserve.setEnabled(true);
+                    Toast.makeText(this, "Reservation cancelled", Toast.LENGTH_SHORT).show();
+                })
+                .addOnFailureListener(e ->
+                        Toast.makeText(this, "Failed: " + e.getMessage(), Toast.LENGTH_LONG).show()
+                );
     }
 }
