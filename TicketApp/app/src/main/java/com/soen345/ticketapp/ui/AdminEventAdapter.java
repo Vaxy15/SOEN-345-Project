@@ -42,11 +42,11 @@ public class AdminEventAdapter extends RecyclerView.Adapter<AdminEventAdapter.VH
         Event e = items.get(position);
         holder.binding.tvTitle.setText(e.getTitle());
         String sub = e.getCategory() + " · " + e.getLocation() + " · "
-            + DateFormat.getDateTimeInstance().format(new Date(e.getDateTimeMillis()))
+            + DateFormat.getDateTimeInstance().format(new Date(e.getTime()))
             + " · seats " + e.getAvailableSeats();
         holder.binding.tvSubtitle.setText(sub);
-        holder.binding.tvCancelled.setVisibility(e.getCancelled() ? View.VISIBLE : View.GONE);
-        holder.binding.btnCancelEvent.setEnabled(!e.getCancelled());
+        holder.binding.tvCancelled.setVisibility(e.isCancelled() ? View.VISIBLE : View.GONE);
+        holder.binding.btnCancelEvent.setEnabled(!e.isCancelled());
         holder.binding.btnEdit.setOnClickListener(v -> listener.onEdit(e));
         holder.binding.btnCancelEvent.setOnClickListener(v -> listener.onCancelEvent(e));
     }

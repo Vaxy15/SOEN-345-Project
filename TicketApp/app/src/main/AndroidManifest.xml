@@ -64,7 +64,17 @@
 
         <!-- If you still have MainActivity, keep it NON-launcher or delete it -->
         <!-- <activity android:name=".MainActivity" android:exported="false" /> -->
+        <activity android:name=".auth.RegisterActivity"
+            android:exported="false" />
 
+        <activity android:name=".ui.SearchActivity"
+            android:exported="false" />
+
+        <activity android:name=".ui.AdminDashboardActivity"
+            android:exported="false" />
+
+        <activity android:name=".ui.AdminAddEditEventActivity"
+            android:exported="false" />
     </application>
 
 </manifest>

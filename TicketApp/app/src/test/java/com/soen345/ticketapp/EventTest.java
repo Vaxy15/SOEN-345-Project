@@ -1,96 +1,121 @@
 package com.soen345.ticketapp;
 
-import org.junit.Test;
-
-import static org.junit.Assert.*;
-
 import com.soen345.ticketapp.model.Event;
 
-public class EventTest {
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
 
-    @Test
-    public void defaultConstructor_createsObject() {
-        Event event = new Event();
-        assertNotNull(event);
+import static org.junit.jupiter.api.Assertions.*;
+
+@DisplayName("Event Model Tests")
+class EventTest {
+
+    private Event event;
+
+    @BeforeEach
+    void setUp() {
+        event = new Event("Rock Concert", "Montreal", "2026-03-10 20:00", "Concert", 100);
+        event.setId("event-001");
     }
 
     @Test
-    public void parameterizedConstructor_setsFieldsCorrectly() {
-        long time = 1710000000000L;
+    @DisplayName("Default constructor creates non-null object")
+    void defaultConstructor_createsObject() {
+        assertNotNull(new Event());
+    }
 
-        Event event = new Event("Concert", "Montreal", "Music", time, 50);
+    @Test
+    @DisplayName("Parameterized constructor sets title correctly")
+    void constructor_setsTitle() {
+        assertEquals("Rock Concert", event.getTitle());
+    }
 
-        assertEquals("Concert", event.getTitle());
+    @Test
+    @DisplayName("Parameterized constructor sets location correctly")
+    void constructor_setsLocation() {
         assertEquals("Montreal", event.getLocation());
-        assertEquals("Music", event.getCategory());
-        assertEquals(time, event.getDateTimeMillis());
-        assertEquals(50, event.getAvailableSeats());
-        assertFalse(event.getCancelled());
     }
 
     @Test
-    public void setId_getId_worksCorrectly() {
-        Event event = new Event();
-        event.setId("E123");
-
-        assertEquals("E123", event.getId());
+    @DisplayName("Parameterized constructor sets category correctly")
+    void constructor_setsCategory() {
+        assertEquals("Concert", event.getCategory());
     }
 
     @Test
-    public void setTitle_getTitle_worksCorrectly() {
-        Event event = new Event();
-        event.setTitle("Movie Night");
-
-        assertEquals("Movie Night", event.getTitle());
+    @DisplayName("Parameterized constructor sets time correctly")
+    void constructor_setsTime() {
+        assertEquals("2026-03-10 20:00", event.getTime());
     }
 
     @Test
-    public void setLocation_getLocation_worksCorrectly() {
-        Event event = new Event();
-        event.setLocation("Laval");
-
-        assertEquals("Laval", event.getLocation());
+    @DisplayName("Parameterized constructor sets availableSeats correctly")
+    void constructor_setsAvailableSeats() {
+        assertEquals(100, event.getAvailableSeats());
     }
 
     @Test
-    public void getCategory_returnsDefaultGeneral_whenCategoryIsNull() {
-        Event event = new Event();
-        event.setCategory(null);
-
-        assertEquals("General", event.getCategory());
+    @DisplayName("New event is not cancelled by default")
+    void constructor_isNotCancelledByDefault() {
+        assertFalse(event.isCancelled());
     }
 
     @Test
-    public void getCategory_returnsActualCategory_whenCategoryIsSet() {
-        Event event = new Event();
-        event.setCategory("Sports");
-
-        assertEquals("Sports", event.getCategory());
+    @DisplayName("getCategory returns General when category is null")
+    void getCategory_returnsGeneral_whenNull() {
+        Event e = new Event();
+        e.setCategory(null);
+        assertEquals("General", e.getCategory());
     }
 
     @Test
-    public void setDateTimeMillis_getDateTimeMillis_worksCorrectly() {
-        Event event = new Event();
-        long time = 1720000000000L;
-
-        event.setDateTimeMillis(time);
-
-        assertEquals(time, event.getDateTimeMillis());
+    @DisplayName("setId and getId work correctly")
+    void setId_getId() {
+        event.setId("E999");
+        assertEquals("E999", event.getId());
     }
 
     @Test
-    public void setAvailableSeats_getAvailableSeats_worksCorrectly() {
-        Event event = new Event();
-        event.setAvailableSeats(120);
-
-        assertEquals(120, event.getAvailableSeats());
+    @DisplayName("setTitle and getTitle work correctly")
+    void setTitle_getTitle() {
+        event.setTitle("Jazz Night");
+        assertEquals("Jazz Night", event.getTitle());
     }
 
     @Test
-    public void setCancelled_getCancelled_worksCorrectly() {
-        Event event = new Event();
+    @DisplayName("setLocation and getLocation work correctly")
+    void setLocation_getLocation() {
+        event.setLocation("Toronto");
+        assertEquals("Toronto", event.getLocation());
+    }
+
+    @Test
+    @DisplayName("setTime and getTime work correctly")
+    void setTime_getTime() {
+        event.setTime("2026-08-01 18:30");
+        assertEquals("2026-08-01 18:30", event.getTime());
+    }
+
+    @Test
+    @DisplayName("setAvailableSeats and getAvailableSeats work correctly")
+    void setAvailableSeats_getAvailableSeats() {
+        event.setAvailableSeats(200);
+        assertEquals(200, event.getAvailableSeats());
+    }
+
+    @Test
+    @DisplayName("setCancelled to true sets cancelled correctly")
+    void setCancelled_true() {
         event.setCancelled(true);
+        assertTrue(event.isCancelled());
+    }
 
-        assertTrue(event.getCancelled());
+    @Test
+    @DisplayName("Cancelled event can be restored")
+    void setCancelled_canBeRestored() {
+        event.setCancelled(true);
+        event.setCancelled(false);
+        assertFalse(event.isCancelled());
     }
 }
