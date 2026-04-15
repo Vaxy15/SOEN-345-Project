@@ -17,7 +17,6 @@ public class BookingRepository {
 
     public interface ResultCallback<T> {
         void onSuccess(T value);
-
         void onError(String message);
     }
 
@@ -31,55 +30,106 @@ public class BookingRepository {
         this.db = db;
     }
 
-    public Task<String> reserveSeat(String eventId, String userId) {
+    public Task<String> reserveSeat(@NonNull String eventId, @NonNull String userId) {
         DocumentReference eventRef = db.collection("events").document(eventId);
+
+        // One reservation per user per event.
+        // This also makes duplicate booking prevention transaction-safe.
+        String reservationId = eventId + "_" + userId;
+        DocumentReference reservationRef = db.collection("reservations").document(reservationId);
+
         return db.runTransaction((Transaction.Function<String>) transaction -> {
-            DocumentSnapshot snap = transaction.get(eventRef);
-            if (!snap.exists()) {
-                throw new FirebaseFirestoreException("Event not found", FirebaseFirestoreException.Code.NOT_FOUND);
+            DocumentSnapshot eventSnap = transaction.get(eventRef);
+            if (!eventSnap.exists()) {
+                throw new FirebaseFirestoreException(
+                    "Event not found",
+                    FirebaseFirestoreException.Code.NOT_FOUND
+                );
             }
-            Event e = snap.toObject(Event.class);
-            if (e == null) {
-                throw new FirebaseFirestoreException("Invalid event", FirebaseFirestoreException.Code.ABORTED);
+
+            Event event = eventSnap.toObject(Event.class);
+            if (event == null) {
+                throw new FirebaseFirestoreException(
+                    "Invalid event",
+                    FirebaseFirestoreException.Code.ABORTED
+                );
             }
-            if (e.isCancelled()) {
-                throw new FirebaseFirestoreException("This event was cancelled", FirebaseFirestoreException.Code.FAILED_PRECONDITION);
+
+            DocumentSnapshot existingReservation = transaction.get(reservationRef);
+            if (existingReservation.exists()) {
+                throw new FirebaseFirestoreException(
+                    "You already reserved this event",
+                    FirebaseFirestoreException.Code.ALREADY_EXISTS
+                );
             }
-            if (e.getAvailableSeats() <= 0) {
-                throw new FirebaseFirestoreException("No seats available", FirebaseFirestoreException.Code.FAILED_PRECONDITION);
+
+            if (event.isCancelled()) {
+                throw new FirebaseFirestoreException(
+                    "This event was cancelled",
+                    FirebaseFirestoreException.Code.FAILED_PRECONDITION
+                );
             }
-            DocumentReference newRef = db.collection("reservations").document();
-            Map<String, Object> res = new HashMap<>();
-            res.put("eventId", eventId);
-            res.put("userId", userId);
-            res.put("eventTitle", e.getTitle());
-            res.put("createdAt", System.currentTimeMillis());
-            transaction.set(newRef, res);
-            transaction.update(eventRef, "availableSeats", e.getAvailableSeats() - 1);
-            return newRef.getId();
+
+            if (event.getAvailableSeats() <= 0) {
+                throw new FirebaseFirestoreException(
+                    "No seats available",
+                    FirebaseFirestoreException.Code.FAILED_PRECONDITION
+                );
+            }
+
+            Map<String, Object> reservation = new HashMap<>();
+            reservation.put("userId", userId);
+            reservation.put("eventId", eventId);
+            reservation.put("eventTitle", event.getTitle());
+            reservation.put("eventLocation", event.getLocation());
+            reservation.put("eventDateTimeMillis", event.getDateTimeMillis());
+            reservation.put("createdAt", System.currentTimeMillis());
+
+            transaction.set(reservationRef, reservation);
+            transaction.update(eventRef, "availableSeats", event.getAvailableSeats() - 1);
+
+            return reservationRef.getId();
         });
     }
 
     public Task<Void> cancelReservation(@NonNull String reservationId, @NonNull String userId) {
-        DocumentReference resRef = db.collection("reservations").document(reservationId);
+        DocumentReference reservationRef = db.collection("reservations").document(reservationId);
+
         return db.runTransaction((Transaction.Function<Void>) transaction -> {
-            DocumentSnapshot resSnap = transaction.get(resRef);
-            if (!resSnap.exists()) {
-                throw new FirebaseFirestoreException("Reservation not found", FirebaseFirestoreException.Code.NOT_FOUND);
+            DocumentSnapshot reservationSnap = transaction.get(reservationRef);
+            if (!reservationSnap.exists()) {
+                throw new FirebaseFirestoreException(
+                    "Reservation not found",
+                    FirebaseFirestoreException.Code.NOT_FOUND
+                );
             }
-            if (!userId.equals(resSnap.getString("userId"))) {
-                throw new FirebaseFirestoreException("Not your reservation", FirebaseFirestoreException.Code.PERMISSION_DENIED);
+
+            String reservationUserId = reservationSnap.getString("userId");
+            if (!userId.equals(reservationUserId)) {
+                throw new FirebaseFirestoreException(
+                    "Not your reservation",
+                    FirebaseFirestoreException.Code.PERMISSION_DENIED
+                );
             }
-            String eventId = resSnap.getString("eventId");
+
+            String eventId = reservationSnap.getString("eventId");
             if (eventId == null || eventId.isEmpty()) {
-                throw new FirebaseFirestoreException("Invalid reservation", FirebaseFirestoreException.Code.ABORTED);
+                throw new FirebaseFirestoreException(
+                    "Invalid reservation",
+                    FirebaseFirestoreException.Code.ABORTED
+                );
             }
+
             DocumentReference eventRef = db.collection("events").document(eventId);
             DocumentSnapshot eventSnap = transaction.get(eventRef);
-            Event ev = eventSnap.toObject(Event.class);
-            int seats = ev != null ? ev.getAvailableSeats() : 0;
-            transaction.update(eventRef, "availableSeats", seats + 1);
-            transaction.delete(resRef);
+
+            if (eventSnap.exists()) {
+                Event event = eventSnap.toObject(Event.class);
+                int seats = event != null ? event.getAvailableSeats() : 0;
+                transaction.update(eventRef, "availableSeats", seats + 1);
+            }
+
+            transaction.delete(reservationRef);
             return null;
         });
     }
